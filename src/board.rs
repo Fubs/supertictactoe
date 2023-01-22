@@ -1,14 +1,17 @@
+use crate::eval::*;
 use crate::gamemove::*;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Player {
-    #[default] X,
+    #[default]
+    X,
     O,
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Square {
-    #[default] Empty,
+    #[default]
+    Empty,
     Occupied(Player),
 }
 
@@ -17,7 +20,7 @@ impl From<Square> for Player {
         debug_assert!(square != Square::Empty);
         match square {
             Square::Occupied(player) => player,
-            _ => panic!("Square is empty"),
+            _ => panic!("player.from(square) called on an empty square"),
         }
     }
 }
@@ -35,10 +38,11 @@ impl Board {
     }
 
     pub fn do_move(&mut self, gamemove: GameMove) {
-        self.squares[gamemove.idx[0] as usize][gamemove.idx[1] as usize] = Square::Occupied(gamemove.player);
+        self.squares[gamemove.idx[0] as usize][gamemove.idx[1] as usize] =
+            Square::Occupied(gamemove.player);
     }
 
-    pub fn print(&self) {
+    pub fn _print(&self) {
         for row in self.squares.iter() {
             for square in row.iter() {
                 match square {
@@ -52,12 +56,11 @@ impl Board {
             println!();
         }
     }
-
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct BigBoard{
-    pub subboards: [[Board; 3]; 3], 
+pub struct BigBoard {
+    pub subboards: [[Board; 3]; 3],
 }
 
 impl BigBoard {
@@ -68,9 +71,10 @@ impl BigBoard {
     }
 
     pub fn do_move(&mut self, biggamemove: BigGameMove) {
-        self.subboards[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize].do_move(GameMove::new(biggamemove.sub_idx, biggamemove.player));
+        self.subboards[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize]
+            .do_move(GameMove::new(biggamemove.sub_idx, biggamemove.player));
     }
-    
+
     pub fn print(&self) {
         println!("-------------------------- coords:");
         for big_row in 0..9 {
@@ -111,9 +115,7 @@ impl BigBoard {
             println!();
         }
         println!("--------------------------");
-
     }
-
 }
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
@@ -143,7 +145,14 @@ impl Game {
         self.bigboard.print();
         println!("  Turn: {:?}", self.turn);
         //println!("  Winner: {:?}", self.winner);
-        println!("  Last move: {}", bgm2str(&self.last_move.unwrap_or(BigGameMove::new([0, 0], [0, 0], Player::default()))));
+        println!(
+            "  Last move: {}",
+            bgm2str(
+                &self
+                    .last_move
+                    .unwrap_or(BigGameMove::new([0, 0], [0, 0], Player::default()))
+            )
+        );
         /*println!("  Subboard wins:");
         for row in self.subboard_wins.iter() {
             print!("    ");
@@ -159,7 +168,7 @@ impl Game {
             println!();
         }*/
         println!("  Legal Moves:");
-        if self.is_next_move_anywhere(){
+        if self.is_next_move_anywhere() {
             println!("    Anywhere");
         } else {
             print!("    ");
@@ -170,7 +179,7 @@ impl Game {
         }
     }
 
-    pub fn print_wins(&self) {
+    pub fn _print_wins(&self) {
         for row in self.subboard_wins.iter() {
             for square in row.iter() {
                 match square {
@@ -203,10 +212,12 @@ impl Game {
             Player::O => Player::X,
         };
         //check if subboard is won
-        let subboard = &self.bigboard.subboards[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize];
+        let subboard =
+            &self.bigboard.subboards[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize];
         let w = subboard.winner();
         if let Some(winner) = w {
-            self.subboard_wins[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize] = Some(winner);
+            self.subboard_wins[biggamemove.idx[0] as usize][biggamemove.idx[1] as usize] =
+                Some(winner);
         }
 
         //check if bigboard is won
@@ -214,61 +225,67 @@ impl Game {
         if let Some(winner) = w {
             self.winner = Some(winner);
         }
-
-    }
-
-    pub fn undo_move(&mut self) {
-        debug_assert!(self.last_move.is_some());
-        debug_assert!(self.prev_state.is_some());
-        self.bigboard = self.prev_state.as_ref().unwrap().bigboard;
-        self.subboard_wins = self.prev_state.as_ref().unwrap().subboard_wins;
-        self.turn = self.prev_state.as_ref().unwrap().turn;
-        self.winner = self.prev_state.as_ref().unwrap().winner;
-        self.last_move = self.prev_state.as_ref().unwrap().last_move;
-        self.prev_state = None;
     }
 
     pub fn get_moves(&self) -> Vec<BigGameMove> {
         debug_assert!(self.winner.is_none());
         let mut moves = Vec::new();
+        //next turn's moves must be in the subboard pointed-to by last_move
         if let Some(last_move) = self.last_move {
-            //next turn's moves must be in the subboard pointed-to by last_move
-            if self.subboard_wins[last_move.sub_idx[0] as usize][last_move.sub_idx[1] as usize].is_some(){
+            //if sent to a subboard that is already won, move can go anywhere
+            if self.subboard_wins[last_move.sub_idx[0] as usize][last_move.sub_idx[1] as usize]
+                .is_some()
+            {
                 for big_row in 0..3 {
                     for big_col in 0..3 {
                         let subboard = &self.bigboard.subboards[big_row][big_col];
-                        for row in 0..3 {
-                            for col in 0..3 {
-                                if subboard.squares[row][col] == Square::Empty {
-                                    moves.push(BigGameMove::new([big_row as u8, big_col as u8], [row as u8, col as u8], self.turn));
+                        //but not on a subboard that is already won
+                        if subboard.winner().is_none() {
+                            for row in 0..3 {
+                                for col in 0..3 {
+                                    if subboard.squares[row][col] == Square::Empty {
+                                        moves.push(BigGameMove::new(
+                                            [big_row as u8, big_col as u8],
+                                            [row as u8, col as u8],
+                                            self.turn,
+                                        ));
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            else{
-                let subboard = &self.bigboard.subboards[last_move.sub_idx[0] as usize][last_move.sub_idx[1] as usize];
+            } else {
+                //move was sent to a subboard that is not won, so move must be in that subboard
+                let subboard = &self.bigboard.subboards[last_move.sub_idx[0] as usize]
+                    [last_move.sub_idx[1] as usize];
                 for row in 0..3 {
                     for col in 0..3 {
                         if subboard.squares[row][col] == Square::Empty {
-                            moves.push(BigGameMove::new([last_move.sub_idx[0] as u8, last_move.sub_idx[1] as u8], [row as u8, col as u8], self.turn));
+                            moves.push(BigGameMove::new(
+                                [last_move.sub_idx[0] as u8, last_move.sub_idx[1] as u8],
+                                [row as u8, col as u8],
+                                self.turn,
+                            ));
                         }
                     }
                 }
-        
             }
-            
         } else {
-            //first turn, all moves are valid
+            //self.last_move is None, so this is the first move of the game and can go anywhere
             for big_row in 0..3 {
                 for big_col in 0..3 {
-                    let subboard = &self.bigboard.subboards[big_row][big_col];
                     for row in 0..3 {
                         for col in 0..3 {
-                            if subboard.squares[row][col] == Square::Empty {
-                                moves.push(BigGameMove::new([big_row as u8, big_col as u8], [row as u8, col as u8], self.turn));
-                            }
+                            debug_assert!(
+                                self.bigboard.subboards[big_row][big_col].squares[row][col]
+                                    == Square::Empty
+                            );
+                            moves.push(BigGameMove::new(
+                                [big_row as u8, big_col as u8],
+                                [row as u8, col as u8],
+                                self.turn,
+                            ));
                         }
                     }
                 }
@@ -276,8 +293,23 @@ impl Game {
         }
         moves
     }
-}
 
+    pub fn get_sorted_moves(&self) -> Vec<BigGameMove> {
+        let moves = self.get_moves();
+        let mut zipped: Vec<(i32, BigGameMove)> = moves
+            .iter()
+            .map(|m| (self.get_move_score(m), m.clone()))
+            .collect();
+        zipped.sort_by(|a, b| b.0.cmp(&a.0));
+        zipped.iter().map(|m| m.1.clone()).collect()
+    }
+
+    pub fn get_move_score(&self, m: &BigGameMove) -> i32 {
+        let mut state = self.clone();
+        state.do_move(m.clone());
+        state.score()
+    }
+}
 
 //Winner trait
 pub trait Win {
@@ -288,17 +320,29 @@ impl Win for Board {
     fn winner(&self) -> Option<Player> {
         let mut winner = None;
         for i in 0..3 {
-            if self.squares[i][0] == self.squares[i][1] && self.squares[i][1] == self.squares[i][2] && self.squares[i][0] != Square::Empty {
+            if self.squares[i][0] == self.squares[i][1]
+                && self.squares[i][1] == self.squares[i][2]
+                && self.squares[i][0] != Square::Empty
+            {
                 winner = Some(self.squares[i][0].into());
             }
-            if self.squares[0][i] == self.squares[1][i] && self.squares[1][i] == self.squares[2][i] && self.squares[0][i] != Square::Empty {
+            if self.squares[0][i] == self.squares[1][i]
+                && self.squares[1][i] == self.squares[2][i]
+                && self.squares[0][i] != Square::Empty
+            {
                 winner = Some(self.squares[0][i].into());
             }
         }
-        if self.squares[0][0] == self.squares[1][1] && self.squares[1][1] == self.squares[2][2]  && self.squares[0][0] != Square::Empty {
+        if self.squares[0][0] == self.squares[1][1]
+            && self.squares[1][1] == self.squares[2][2]
+            && self.squares[0][0] != Square::Empty
+        {
             winner = Some(self.squares[0][0].into());
         }
-        if self.squares[0][2] == self.squares[1][1] && self.squares[1][1] == self.squares[2][0]  && self.squares[0][2] != Square::Empty {
+        if self.squares[0][2] == self.squares[1][1]
+            && self.squares[1][1] == self.squares[2][0]
+            && self.squares[0][2] != Square::Empty
+        {
             winner = Some(self.squares[0][2].into());
         }
         winner
@@ -309,22 +353,33 @@ impl Win for BigBoard {
     fn winner(&self) -> Option<Player> {
         let mut winner = None;
         for i in 0..3 {
-            if self.subboards[i][0].winner() == self.subboards[i][1].winner() && self.subboards[i][1].winner() == self.subboards[i][2].winner()  && self.subboards[i][0].winner() != None {
+            if self.subboards[i][0].winner() == self.subboards[i][1].winner()
+                && self.subboards[i][1].winner() == self.subboards[i][2].winner()
+                && self.subboards[i][0].winner() != None
+            {
                 winner = self.subboards[i][0].winner();
             }
-            if self.subboards[0][i].winner() == self.subboards[1][i].winner() && self.subboards[1][i].winner() == self.subboards[2][i].winner()  && self.subboards[0][i].winner() != None{
+            if self.subboards[0][i].winner() == self.subboards[1][i].winner()
+                && self.subboards[1][i].winner() == self.subboards[2][i].winner()
+                && self.subboards[0][i].winner() != None
+            {
                 winner = self.subboards[0][i].winner();
             }
         }
-        if self.subboards[0][0].winner() == self.subboards[1][1].winner() && self.subboards[1][1].winner() == self.subboards[2][2].winner()  && self.subboards[0][0].winner() != None{
+        if self.subboards[0][0].winner() == self.subboards[1][1].winner()
+            && self.subboards[1][1].winner() == self.subboards[2][2].winner()
+            && self.subboards[0][0].winner() != None
+        {
             winner = self.subboards[0][0].winner();
         }
-        if self.subboards[0][2].winner() == self.subboards[1][1].winner() && self.subboards[1][1].winner() == self.subboards[2][0].winner()  && self.subboards[0][2].winner() != None{
+        if self.subboards[0][2].winner() == self.subboards[1][1].winner()
+            && self.subboards[1][1].winner() == self.subboards[2][0].winner()
+            && self.subboards[0][2].winner() != None
+        {
             winner = self.subboards[0][2].winner();
         }
         winner
     }
-
 }
 
 impl Win for Game {
@@ -332,5 +387,3 @@ impl Win for Game {
         self.bigboard.winner()
     }
 }
-
-

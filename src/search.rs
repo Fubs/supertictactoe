@@ -1,15 +1,20 @@
 use crate::board::*;
-use crate::gamemove::*;
 use crate::eval::*;
+use crate::gamemove::*;
 
-pub fn alphabeta(game: &mut Game, depth: usize, mut alpha: i64, mut beta: i64, line: &mut Vec<BigGameMove>) -> i64 {
-    
-    if depth == 0 {
+pub fn alphabeta(
+    game: &mut Game,
+    depth: usize,
+    mut alpha: i32,
+    beta: i32,
+    line: &mut Vec<BigGameMove>,
+) -> i32 {
+    if depth == 0 || game.winner().is_some() {
         return game.score();
     }
 
-    let mut next_line:Vec<BigGameMove> = Vec::new();
-    let moves = game.get_moves();
+    let mut next_line: Vec<BigGameMove> = Vec::new();
+    let moves = game.get_sorted_moves();
 
     for m in moves.iter() {
         let mut game_copy = game.clone();

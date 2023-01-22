@@ -1,10 +1,10 @@
 use crate::board::*;
-use crate::gamemove::*;
 use crate::eval::*;
+use crate::gamemove::*;
 use crate::search::*;
 use std::io;
-use std::io::Write;
 use std::io::BufRead;
+use std::io::Write;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -17,13 +17,12 @@ pub struct Engine;
 
 impl Engine {
     fn new() -> Engine {
-        Engine{}
+        Engine {}
     }
 }
 
 impl MoveSelect for Engine {
-
-    fn choose_move(game: Game) -> BigGameMove{
+    fn choose_move(game: Game) -> BigGameMove {
         println!("Thinking...");
         let mut game_cpy = game.clone();
         let mut pv = vec![];
@@ -34,17 +33,17 @@ impl MoveSelect for Engine {
                 Player::X => {
                     let score = alphabeta(&mut game_cpy, 8, -1000000, 1000000, &mut pv);
                     match sender.send(pv) {
-                        Ok(()) => {}, // everything good
-                        Err(_) => {}, // we have been released, don't panic
+                        Ok(()) => {} // everything good
+                        Err(_) => {} // we have been released, don't panic
                     }
-                },
+                }
                 Player::O => {
                     let score = alphabeta(&mut game_cpy, 8, 1000000, -1000000, &mut pv);
                     match sender.send(pv) {
-                        Ok(()) => {}, // everything good
-                        Err(_) => {}, // we have been released, don't panic
+                        Ok(()) => {} // everything good
+                        Err(_) => {} // we have been released, don't panic
                     }
-                },
+                }
             }
         });
         let result = receiver.recv_timeout(Duration::from_millis(10000));
@@ -53,38 +52,33 @@ impl MoveSelect for Engine {
             match game.turn {
                 Player::X => {
                     let mut game_cpy2 = game.clone();
-                    let mut pv2= vec![];
+                    let mut pv2 = vec![];
                     let score = alphabeta(&mut game_cpy2, 6, -1000000, 1000000, &mut pv2);
                     return pv2[0];
-                },
+                }
                 Player::O => {
                     let mut game_cpy2 = game.clone();
-                    let mut pv2= vec![];
+                    let mut pv2 = vec![];
                     let _score = alphabeta(&mut game_cpy2, 6, 1000000, -1000000, &mut pv2);
                     return pv2[0];
-                },
+                }
             }
-            
-        }
-        else{ 
+        } else {
             return result.unwrap()[0];
         }
     }
-    
 }
-
 
 pub struct Human;
 
-impl Human{
-    fn new() -> Human{
-        Human{}
+impl Human {
+    fn new() -> Human {
+        Human {}
     }
 }
 
-impl MoveSelect for Human{
-
-    fn choose_move(game: Game) -> BigGameMove{
+impl MoveSelect for Human {
+    fn choose_move(game: Game) -> BigGameMove {
         let mut game_cpy = game.clone();
         game_cpy.print();
 
@@ -111,8 +105,7 @@ impl MoveSelect for Human{
                 println!("g7 g8 g9 | h7 h8 h9 | i7 i8 i9");
                 line.clear();
                 let b1 = std::io::stdin().read_line(&mut line).unwrap();
-            }
-            else {
+            } else {
                 line.clear();
                 let b1 = std::io::stdin().read_line(&mut line).unwrap();
             }
@@ -122,16 +115,15 @@ impl MoveSelect for Human{
             Some(m) => {
                 if game_cpy.get_moves().contains(&m) {
                     return m;
-                }
-                else {
+                } else {
                     println!("Invalid move, try again");
                     return Human::choose_move(game);
                 }
-            },
+            }
             None => {
                 println!("Invalid move, try again");
                 return Human::choose_move(game);
-            },
+            }
         }
     }
 }
@@ -150,4 +142,3 @@ pub fn play() {
         None => println!("No winner, error?"),
     }
 }
-
