@@ -13,6 +13,6 @@ use search::*;
 use sfml::*;
 
 fn main() {
-    //play_gui();
-    play_cli();
+    play_gui();
+    //play_cli();
 }

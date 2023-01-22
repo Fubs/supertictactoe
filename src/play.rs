@@ -128,7 +128,7 @@ impl MoveSelect for Human {
     }
 }
 
-pub fn play() {
+pub fn play_cli() {
     let mut game = Game::new();
     while game.winner().is_none() {
         let emv = Engine::choose_move(game.clone());
